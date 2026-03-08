@@ -1,60 +1,109 @@
-# My-prodgectgame
+# Neon Kolobok: Hell Tower
 
-Минимальный стартовый каркас для desktop-игры на **Python + Pygame** в стиле Mario-like (платформер).
+Хардкорная 2D-аркада для Windows 11 (и Linux/macOS для разработки) на **Python + Pygame**.
+
+Игрок управляет неоновым колобком, поднимающимся по вертикальной адской башне. Ошибки наказываются мгновенно, но рестарт быстрый: фокус на ритме «ещё одна попытка».
+
+## Особенности
+
+- Оригинальная игра с собственным названием, стилем, логикой и структурой уровней.
+- 3 режима:
+  - **Normal** — редкий чекпоинт,
+  - **Hardcore** — без чекпоинтов,
+  - **Practice** — частые чекпоинты.
+- Опасности: шипы, импульсные лазеры, исчезающие платформы, зоны ускорения.
+- Вертикальная башня из 5 секций сложности (старт + 3 роста + финал).
+- Эффекты: glow, trail, вспышка смерти, пульсации и shake.
+- Локальное сохранение результатов и настроек в `save_data.json`.
+- Локальный leaderboard (top-10).
+- Поддержка 16:9, 60 FPS, переключение fullscreen (F11).
+
+## Управление
+
+- `A/D` или `←/→` — движение
+- `Space` / `W` / `↑` — прыжок
+- `R` — быстрый рестарт (смерть)
+- `Esc` — пауза / возврат в меню
+- `F11` — полноэкранный режим
+- В меню:
+  - `1` Normal
+  - `2` Hardcore
+  - `3` Practice
+  - `M` музыка on/off
+  - `N` sfx on/off
 
 ## Структура проекта
 
 ```text
 .
-├── requirements.txt
-├── run_game.py
+├── assets/
+├── build/
+│   ├── build_windows.bat
+│   └── build_windows.ps1
 ├── scripts/
 │   └── run_local.sh
-└── src/
-    └── mario_like/
-        ├── __init__.py
-        ├── game.py
-        ├── main.py
-        └── settings.py
+├── src/
+│   └── neon_kolobok/
+│       ├── audio.py
+│       ├── game.py
+│       ├── level.py
+│       ├── main.py
+│       ├── settings.py
+│       └── storage.py
+├── tests/
+│   └── test_smoke.py
+├── requirements.txt
+├── run_game.py
+└── README.md
 ```
 
-## Что уже сделано
+## Быстрый запуск (локально)
 
-- Окно игры и игровой цикл (`Game.run`)
-- Игрок (прямоугольник), движение влево/вправо, прыжок
-- Гравитация и простые платформы
-- Сброс позиции игрока, если упал вниз
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+PYTHONPATH=src python run_game.py
+```
 
-## Первый запуск (быстрый)
-
-### Вариант 1: одним скриптом
+или
 
 ```bash
 bash scripts/run_local.sh
 ```
 
-Скрипт создаст виртуальное окружение, установит зависимости и запустит игру.
+## Сборка Windows .exe
 
-### Вариант 2: вручную
+### Вариант 1 (cmd)
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-PYTHONPATH=src python run_game.py
+```bat
+build\build_windows.bat
 ```
 
-## Управление
+### Вариант 2 (PowerShell)
 
-- `A` / `←` — влево
-- `D` / `→` — вправо
-- `W` / `↑` / `Space` — прыжок
-- Закрытие окна — выход
+```powershell
+./build/build_windows.ps1
+```
 
-## Следующие шаги
+Результат: `dist/NeonKolobokHellTower.exe`.
 
-1. Добавить спрайты вместо цветных прямоугольников.
-2. Выделить `Level`/`TileMap` и загружать карту из файла.
-3. Добавить врагов и коллизии с ними.
-4. Сделать камеру, которая следует за игроком.
-5. Добавить экран `Game Over` и счёт.
+## Автопроверки / smoke tests
+
+```bash
+PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
+```
+
+Проверяет:
+- базовую загрузку уровня,
+- столкновения/смерть,
+- сохранение и чтение прогресса.
+
+## Архитектура
+
+- `game.py` — основной цикл, состояния (menu/playing/pause/win), рендер, эффекты, ввод.
+- `level.py` — генерация башни и сущностей опасностей.
+- `storage.py` — локальный persistence для рекордов и настроек.
+- `audio.py` — процедурная генерация базовых звуков (без внешних ассетов).
+- `main.py` / `run_game.py` — entrypoint запуска.
+
