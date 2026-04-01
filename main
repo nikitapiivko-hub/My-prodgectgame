@@ -1,0 +1,297 @@
+diff --git a/.gitignore b/.gitignore
+index d4fb28184f4c459bb7776d255262d8f9a1b7d511..bc4f72a7e6bcb73eab966923cd73fc786cee529f 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,41 +1,4 @@
+-# Prerequisites
+-*.d
+-
+-# Compiled Object files
+-*.slo
+-*.lo
+-*.o
+-*.obj
+-
+-# Precompiled Headers
+-*.gch
+-*.pch
+-
+-# Linker files
+-*.ilk
+-
+-# Debugger Files
+-*.pdb
+-
+-# Compiled Dynamic libraries
+-*.so
+-*.dylib
+-*.dll
+-
+-# Fortran module files
+-*.mod
+-*.smod
+-
+-# Compiled Static libraries
+-*.lai
+-*.la
+-*.a
+-*.lib
+-
+-# Executables
+-*.exe
+-*.out
+-*.app
+-
+-# debug information files
+-*.dwo
++__pycache__/
++*.pyc
++.venv/
++.env
+diff --git a/README.md b/README.md
+index 456b6b0745304a5952669d9929a36f1999d99378..fe0920fc90196c5be4b0c00c5f405c794009d821 100644
+--- a/README.md
++++ b/README.md
+@@ -1 +1,60 @@
+-# My-prodgectgame
+\ No newline at end of file
++# My-prodgectgame
++
++Минимальный стартовый каркас для desktop-игры на **Python + Pygame** в стиле Mario-like (платформер).
++
++## Структура проекта
++
++```text
++.
++├── requirements.txt
++├── run_game.py
++├── scripts/
++│   └── run_local.sh
++└── src/
++    └── mario_like/
++        ├── __init__.py
++        ├── game.py
++        ├── main.py
++        └── settings.py
++```
++
++## Что уже сделано
++
++- Окно игры и игровой цикл (`Game.run`)
++- Игрок (прямоугольник), движение влево/вправо, прыжок
++- Гравитация и простые платформы
++- Сброс позиции игрока, если упал вниз
++
++## Первый запуск (быстрый)
++
++### Вариант 1: одним скриптом
++
++```bash
++bash scripts/run_local.sh
++```
++
++Скрипт создаст виртуальное окружение, установит зависимости и запустит игру.
++
++### Вариант 2: вручную
++
++```bash
++python3 -m venv .venv
++source .venv/bin/activate
++pip install -r requirements.txt
++PYTHONPATH=src python run_game.py
++```
++
++## Управление
++
++- `A` / `←` — влево
++- `D` / `→` — вправо
++- `W` / `↑` / `Space` — прыжок
++- Закрытие окна — выход
++
++## Следующие шаги
++
++1. Добавить спрайты вместо цветных прямоугольников.
++2. Выделить `Level`/`TileMap` и загружать карту из файла.
++3. Добавить врагов и коллизии с ними.
++4. Сделать камеру, которая следует за игроком.
++5. Добавить экран `Game Over` и счёт.
+diff --git a/requirements.txt b/requirements.txt
+new file mode 100644
+index 0000000000000000000000000000000000000000..21a1eb1e5ed79c655a0b926574e07f9a4110228b
+--- /dev/null
++++ b/requirements.txt
+@@ -0,0 +1 @@
++pygame>=2.5,<3.0
+diff --git a/run_game.py b/run_game.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..708dacdc421086ce234024270cef364823169ca2
+--- /dev/null
++++ b/run_game.py
+@@ -0,0 +1,13 @@
++from pathlib import Path
++import sys
++
++ROOT = Path(__file__).resolve().parent
++SRC = ROOT / "src"
++if str(SRC) not in sys.path:
++    sys.path.insert(0, str(SRC))
++
++from mario_like.main import main
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/scripts/run_local.sh b/scripts/run_local.sh
+new file mode 100755
+index 0000000000000000000000000000000000000000..4cd8a55f8c48b57364b7a353b6670965c18f62e0
+--- /dev/null
++++ b/scripts/run_local.sh
+@@ -0,0 +1,8 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++python3 -m venv .venv
++source .venv/bin/activate
++pip install --upgrade pip
++pip install -r requirements.txt
++python run_game.py
+diff --git a/src/mario_like/__init__.py b/src/mario_like/__init__.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..ca5be75cd1d1be66e8f547112d991c0ae3fb08f7
+--- /dev/null
++++ b/src/mario_like/__init__.py
+@@ -0,0 +1,3 @@
++"""Minimal pygame starter package for a platformer prototype."""
++
++__all__ = ["main"]
+diff --git a/src/mario_like/game.py b/src/mario_like/game.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..3cc00ebbe07a934f26d261a2b200e1cac8e4d619
+--- /dev/null
++++ b/src/mario_like/game.py
+@@ -0,0 +1,83 @@
++from __future__ import annotations
++
++import pygame
++
++from . import settings
++
++
++class Player:
++    def __init__(self, x: int, y: int, width: int = 36, height: int = 48) -> None:
++        self.rect = pygame.Rect(x, y, width, height)
++        self.velocity_y = 0.0
++        self.on_ground = False
++
++    def handle_input(self, keys: pygame.key.ScancodeWrapper) -> None:
++        dx = 0
++        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
++            dx -= settings.PLAYER_SPEED
++        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
++            dx += settings.PLAYER_SPEED
++
++        self.rect.x += dx
++
++        if (keys[pygame.K_SPACE] or keys[pygame.K_UP] or keys[pygame.K_w]) and self.on_ground:
++            self.velocity_y = settings.JUMP_SPEED
++            self.on_ground = False
++
++    def apply_gravity(self) -> None:
++        self.velocity_y += settings.GRAVITY
++        self.rect.y += int(self.velocity_y)
++
++    def resolve_collisions(self, platforms: list[pygame.Rect]) -> None:
++        self.on_ground = False
++        for platform in platforms:
++            if self.rect.colliderect(platform) and self.velocity_y >= 0:
++                self.rect.bottom = platform.top
++                self.velocity_y = 0
++                self.on_ground = True
++
++
++class Game:
++    def __init__(self, screen: pygame.Surface) -> None:
++        self.screen = screen
++        self.clock = pygame.time.Clock()
++        self.running = True
++
++        self.player = Player(120, 160)
++        self.platforms = [
++            pygame.Rect(0, settings.SCREEN_HEIGHT - 40, settings.SCREEN_WIDTH, 40),
++            pygame.Rect(170, settings.SCREEN_HEIGHT - 140, 180, 20),
++            pygame.Rect(460, settings.SCREEN_HEIGHT - 220, 220, 20),
++        ]
++
++    def handle_events(self) -> None:
++        for event in pygame.event.get():
++            if event.type == pygame.QUIT:
++                self.running = False
++
++    def update(self) -> None:
++        keys = pygame.key.get_pressed()
++        self.player.handle_input(keys)
++        self.player.apply_gravity()
++        self.player.resolve_collisions(self.platforms)
++
++        if self.player.rect.top > settings.SCREEN_HEIGHT:
++            self.player.rect.topleft = (120, 80)
++            self.player.velocity_y = 0
++
++    def render(self) -> None:
++        self.screen.fill((92, 186, 255))
++
++        for platform in self.platforms:
++            pygame.draw.rect(self.screen, (52, 128, 52), platform)
++
++        pygame.draw.rect(self.screen, (220, 64, 64), self.player.rect)
++
++        pygame.display.flip()
++
++    def run(self) -> None:
++        while self.running:
++            self.handle_events()
++            self.update()
++            self.render()
++            self.clock.tick(settings.FPS)
+diff --git a/src/mario_like/main.py b/src/mario_like/main.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..67614ad9bfe1ddf05d968d21f5237a31b788c189
+--- /dev/null
++++ b/src/mario_like/main.py
+@@ -0,0 +1,21 @@
++"""Entry point for running the pygame prototype."""
++
++import pygame
++
++from .game import Game
++from .settings import SCREEN_HEIGHT, SCREEN_WIDTH, TITLE
++
++
++def main() -> None:
++    pygame.init()
++    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
++    pygame.display.set_caption(TITLE)
++
++    game = Game(screen)
++    game.run()
++
++    pygame.quit()
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/src/mario_like/settings.py b/src/mario_like/settings.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..9fd49ded964b67fb96cc72468a5a8d786be4e1d4
+--- /dev/null
++++ b/src/mario_like/settings.py
+@@ -0,0 +1,9 @@
++"""Game configuration constants."""
++
++SCREEN_WIDTH = 960
++SCREEN_HEIGHT = 540
++FPS = 60
++GRAVITY = 0.6
++PLAYER_SPEED = 5
++JUMP_SPEED = -13
++TITLE = "My-prodjectgame: Mario-like Prototype"
